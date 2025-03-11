@@ -1,35 +1,33 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Upload,
   Image,
   FileText,
-  Save,
   Microscope,
   Fingerprint,
   Trash2,
   Camera,
   BarChart3,
-  PanelLeft,
   Eye,
   Share,
   Settings,
   UploadCloud,
   Plus,
-  FileUp,
   ChevronRight,
   MessageSquare,
   Book,
   Scroll,
   LayoutGrid,
   Info,
+  FileUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -40,17 +38,29 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Case() {
   const { caseId } = useParams();
   const [caseName, setCaseName] = useState(`Case #${caseId?.replace("case-", "")}`);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"sources" | "chat" | "studio">("sources");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  const triggerFileUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
     const newImages: string[] = [];
     
@@ -72,8 +82,19 @@ export default function Case() {
           }
         };
         reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: "Only image files are supported at this time.",
+          variant: "destructive",
+        });
       }
     });
+    
+    // Clear the input value to allow uploading the same file again
+    if (e.target) {
+      e.target.value = "";
+    }
   };
 
   const handleDeleteImage = (index: number) => {
@@ -85,9 +106,14 @@ export default function Case() {
       title: "Image Deleted",
       description: "The image has been removed from your case.",
     });
+    
+    if (selectedImage === uploadedImages[index]) {
+      setSelectedImage(null);
+    }
   };
 
   const analyzeEvidence = () => {
+    setIsAnalyzing(true);
     toast({
       title: "Analysis Started",
       description: "Your evidence is being analyzed. This may take a moment.",
@@ -95,12 +121,19 @@ export default function Case() {
     
     // Simulate analysis time
     setTimeout(() => {
-      setActiveTab("studio");
+      setIsAnalyzing(false);
+      if (!isMobile) {
+        setActiveTab("studio");
+      }
       toast({
         title: "Analysis Complete",
         description: "Your evidence has been analyzed. View the results in the Studio tab.",
       });
     }, 2000);
+  };
+
+  const handleImageClick = (imageSrc: string) => {
+    setSelectedImage(imageSrc);
   };
 
   return (
@@ -109,21 +142,65 @@ export default function Case() {
       <header className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
           <Link to="/dashboard">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-              <Microscope className="w-5 h-5 text-primary" />
-            </div>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
           </Link>
-          <h1 className="text-xl font-semibold">{caseName}</h1>
+          <div className="flex items-center">
+            <h1 className="text-xl font-semibold">{caseName}</h1>
+            <Button variant="ghost" size="sm" className="ml-2" onClick={() => {
+              const newName = prompt("Enter new case name:", caseName);
+              if (newName) setCaseName(newName);
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+            </Button>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Share className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Share className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Share this case</DialogTitle>
+                <DialogDescription>
+                  Invite others to collaborate on this forensic investigation.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Input placeholder="Enter email address" />
+                  <Button size="sm" className="w-full">Send invitation</Button>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-2">Share link</p>
+                  <div className="flex items-center gap-2">
+                    <Input value={window.location.href} readOnly />
+                    <Button variant="outline" size="sm" onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast({
+                        title: "Link copied",
+                        description: "Case link copied to clipboard.",
+                      });
+                    }}>
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" size="sm">
             <Settings className="w-4 h-4" />
-            Settings
           </Button>
           <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
             U
@@ -136,57 +213,56 @@ export default function Case() {
         {/* Sources Panel */}
         <div className={`w-96 border-r overflow-y-auto flex flex-col ${activeTab === "sources" ? "block" : "hidden md:block"}`}>
           <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold">Sources</h2>
+            <h2 className="font-semibold">Evidence Images</h2>
             <Button variant="ghost" size="icon">
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
           
           <div className="p-3">
-            <Button className="w-full justify-center" size="sm">
+            <Input
+              id="file-upload"
+              type="file"
+              className="hidden"
+              accept="image/*"
+              multiple
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            <Button 
+              className="w-full justify-center" 
+              size="sm"
+              onClick={triggerFileUpload}
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Add source
+              Add images
             </Button>
           </div>
           
           {uploadedImages.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-muted-foreground">
-              <div className="p-3 bg-muted rounded-lg mb-3">
-                <FileText className="w-8 h-8" />
+              <div className="p-6 bg-muted/50 rounded-lg mb-6">
+                <FileUp className="w-12 h-12" />
               </div>
-              <h3 className="font-medium">Saved sources will appear here</h3>
-              <p className="text-sm mt-2 max-w-xs">
-                Click Add source above to add images, PDFs, videos, or other evidence files.
+              <h3 className="font-medium text-lg">Upload evidence images</h3>
+              <p className="text-sm mt-2 max-w-xs mb-8">
+                Upload images from the crime scene or other evidence to analyze patterns and generate insights.
               </p>
               
-              <div className="mt-8">
-                <Input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="file-upload">
-                  <Button variant="outline" className="gap-1" asChild>
-                    <span>
-                      <UploadCloud className="h-4 w-4 mr-1" />
-                      Upload a source
-                    </span>
-                  </Button>
-                </label>
-              </div>
+              <Button variant="default" className="gap-1" onClick={triggerFileUpload}>
+                <UploadCloud className="h-4 w-4 mr-1" />
+                Upload images
+              </Button>
             </div>
           ) : (
             <div className="p-4 space-y-3">
               {uploadedImages.map((src, index) => (
                 <div 
                   key={index} 
-                  className="relative group rounded-md border overflow-hidden flex items-center p-2 hover:bg-accent cursor-pointer"
-                  onClick={() => {/* Preview image logic */}}
+                  className={`relative group rounded-md border overflow-hidden flex items-center p-2 hover:bg-accent cursor-pointer ${selectedImage === src ? 'bg-accent/60' : ''}`}
+                  onClick={() => handleImageClick(src)}
                 >
-                  <div className="h-12 w-12 rounded overflow-hidden mr-3 flex-shrink-0">
+                  <div className="h-16 w-16 rounded overflow-hidden mr-3 flex-shrink-0">
                     <img
                       src={src}
                       alt={`Evidence ${index + 1}`}
@@ -216,9 +292,19 @@ export default function Case() {
                   <Button 
                     className="w-full" 
                     onClick={analyzeEvidence}
+                    disabled={isAnalyzing}
                   >
-                    <Microscope className="h-4 w-4 mr-2" />
-                    Analyze Evidence
+                    {isAnalyzing ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Microscope className="h-4 w-4 mr-2" />
+                        Analyze Evidence
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
@@ -227,13 +313,13 @@ export default function Case() {
           
           {/* Upload button at the bottom */}
           <div className="mt-auto p-4 border-t">
-            <div className="flex items-center bg-muted/80 rounded-lg p-3">
+            <div className="flex items-center bg-muted/50 rounded-lg p-3">
               <div className="flex-1">
-                <p className="text-sm">Upload a source to get started</p>
-                <p className="text-xs text-muted-foreground">0 sources</p>
+                <p className="text-sm font-medium">Evidence summary</p>
+                <p className="text-xs text-muted-foreground">{uploadedImages.length} image{uploadedImages.length !== 1 ? 's' : ''}</p>
               </div>
-              <Button size="sm" className="rounded-full w-8 h-8 p-0 flex-shrink-0">
-                <ChevronRight className="h-4 w-4" />
+              <Button size="sm" className="rounded-full w-8 h-8 p-0 flex-shrink-0" onClick={triggerFileUpload}>
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -242,52 +328,72 @@ export default function Case() {
         {/* Chat/Middle Panel */}
         <div className={`flex-1 flex flex-col ${activeTab === "chat" ? "block" : "hidden md:block"}`}>
           <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold">Chat</h2>
+            <h2 className="font-semibold">Image Preview</h2>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+          <div className="flex-1 flex flex-col items-center justify-center p-4 bg-card/40">
             {uploadedImages.length === 0 ? (
-              <>
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
-                  <UploadCloud className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-medium mb-2">Add a source to get started</h3>
-                <p className="text-sm max-w-md mb-8">
-                  Upload evidence images to analyze or generate forensic reports
+              <div className="text-center max-w-md">
+                <Image className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No images to display</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Upload evidence images from the Sources panel to view and analyze them here.
                 </p>
-                <Input
-                  id="chat-file-upload"
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  multiple
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="chat-file-upload">
-                  <Button className="gap-1" asChild>
-                    <span>
-                      <UploadCloud className="h-4 w-4 mr-1" />
-                      Upload a source
-                    </span>
-                  </Button>
-                </label>
-              </>
-            ) : (
-              <>
-                <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Ask questions about your evidence</h3>
-                <p className="text-sm mt-2 max-w-md">
-                  Your evidence has been uploaded. Click "Analyze Evidence" to generate insights or ask specific questions.
-                </p>
-                
-                <Button
-                  className="mt-8"
-                  onClick={analyzeEvidence}
-                >
-                  <Microscope className="h-4 w-4 mr-2" />
-                  Analyze Evidence
+                <Button onClick={triggerFileUpload}>
+                  <UploadCloud className="h-4 w-4 mr-2" />
+                  Upload images
                 </Button>
-              </>
+              </div>
+            ) : selectedImage ? (
+              <div className="flex flex-col w-full max-w-3xl h-full">
+                <div className="relative flex-1 flex items-center justify-center bg-black/5 rounded-lg overflow-hidden">
+                  <img 
+                    src={selectedImage} 
+                    alt="Selected evidence" 
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+                
+                <div className="mt-4 flex justify-between">
+                  <Button variant="outline" size="sm">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate report
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Camera className="h-4 w-4 mr-2" />
+                    Enhance image
+                  </Button>
+                  <Button variant="default" size="sm" onClick={analyzeEvidence} disabled={isAnalyzing}>
+                    {isAnalyzing ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Microscope className="h-4 w-4 mr-2" />
+                        Analyze
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">Select an image to analyze</h3>
+                <p className="text-sm mt-2 max-w-md text-muted-foreground">
+                  Click on any image in the Evidence Images panel to view and analyze it.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -295,68 +401,79 @@ export default function Case() {
         {/* Studio/Tools Panel */}
         <div className={`w-96 border-l overflow-y-auto flex flex-col ${activeTab === "studio" ? "block" : "hidden md:block"}`}>
           <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold">Studio</h2>
+            <h2 className="font-semibold">Forensic Tools</h2>
             <Button variant="ghost" size="icon">
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
           
           <div className="p-4">
-            <div className="mb-8">
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium flex items-center">
-                  Forensic Overview
+                  Image Analysis
                   <Button variant="ghost" size="icon" className="ml-1 h-6 w-6">
                     <Info className="w-3 h-3" />
                   </Button>
                 </h3>
               </div>
               
-              <div className="p-4 rounded-lg border bg-card">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Microscope className="w-6 h-6 text-primary" />
+              <Card className="mb-4">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Microscope className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Crime Scene Analysis</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {uploadedImages.length} image{uploadedImages.length !== 1 ? "s" : ""} available
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium">Crime Scene Analysis</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {uploadedImages.length} image{uploadedImages.length !== 1 ? "s" : ""} uploaded
-                    </p>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button className="justify-start" variant="outline" size="sm">
+                      <Customize className="w-4 h-4 mr-2" />
+                      Options
+                    </Button>
+                    <Button className="justify-start" size="sm" disabled={uploadedImages.length === 0 || isAnalyzing} onClick={analyzeEvidence}>
+                      {isAnalyzing ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          Analyze
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button className="justify-start" variant="outline" size="sm">
-                    <Customize className="w-4 h-4 mr-2" />
-                    Customize
-                  </Button>
-                  <Button className="justify-start" size="sm">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Generate
-                  </Button>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
             
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Forensic Tools</h3>
+                <h3 className="font-medium">Tools</h3>
               </div>
               
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start text-left" size="sm">
+                <Button variant="outline" className="w-full justify-start text-left" size="sm" disabled={uploadedImages.length === 0}>
                   <Fingerprint className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">Fingerprint Analysis</span>
+                  <span className="truncate">Fingerprint Detection</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-left" size="sm">
+                <Button variant="outline" className="w-full justify-start text-left" size="sm" disabled={uploadedImages.length === 0}>
                   <Camera className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Image Enhancement</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-left" size="sm">
+                <Button variant="outline" className="w-full justify-start text-left" size="sm" disabled={uploadedImages.length === 0}>
                   <FileText className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Evidence Report</span>
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-left" size="sm">
+                <Button variant="outline" className="w-full justify-start text-left" size="sm" disabled={uploadedImages.length === 0}>
                   <BarChart3 className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="truncate">Pattern Recognition</span>
                 </Button>
@@ -365,7 +482,7 @@ export default function Case() {
             
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Notes</h3>
+                <h3 className="font-medium">Analysis Notes</h3>
                 <Button variant="ghost" size="sm" className="h-7 gap-1">
                   <Plus className="h-3.5 w-3.5" />
                   Add note
@@ -399,9 +516,9 @@ export default function Case() {
               <div className="p-3 bg-muted rounded-lg mb-3">
                 <FileText className="w-8 h-8" />
               </div>
-              <h3 className="font-medium">Saved notes will appear here</h3>
+              <h3 className="font-medium">Analysis results will appear here</h3>
               <p className="text-xs mt-2 text-muted-foreground">
-                Save a note or insight to create a new note, or click Add note above
+                Click "Analyze" on an evidence image to generate insights and analysis
               </p>
             </div>
           </div>
@@ -416,21 +533,21 @@ export default function Case() {
             onClick={() => setActiveTab("sources")}
           >
             <Image className="h-5 w-5 mb-1" />
-            <span className="text-xs">Sources</span>
+            <span className="text-xs">Images</span>
           </button>
           <button
             className={`flex flex-col items-center py-3 ${activeTab === "chat" ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("chat")}
           >
-            <MessageSquare className="h-5 w-5 mb-1" />
-            <span className="text-xs">Chat</span>
+            <Eye className="h-5 w-5 mb-1" />
+            <span className="text-xs">Preview</span>
           </button>
           <button
             className={`flex flex-col items-center py-3 ${activeTab === "studio" ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("studio")}
           >
             <Microscope className="h-5 w-5 mb-1" />
-            <span className="text-xs">Studio</span>
+            <span className="text-xs">Tools</span>
           </button>
         </div>
       </div>
