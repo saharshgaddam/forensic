@@ -3,27 +3,27 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const testimonials = [
   {
-    body: 'CrimeSleuth AI has revolutionized our department's investigation process. We solved a cold case within weeks of implementing the platform.',
+    body: "CrimeSleuth AI has revolutionized our department's investigation process. We solved a cold case within weeks of implementing the platform.",
     author: {
-      name: 'Det. Sarah Johnson',
-      role: 'Lead Investigator, Boston PD',
-      initial: 'SJ',
+      name: "Det. Sarah Johnson",
+      role: "Lead Investigator, Boston PD",
+      initial: "SJ",
     },
   },
   {
-    body: 'The pattern recognition capabilities identified crucial evidence that we had overlooked during our initial walkthrough. Truly game-changing technology.',
+    body: "The pattern recognition capabilities identified crucial evidence that we had overlooked during our initial walkthrough. Truly game-changing technology.",
     author: {
-      name: 'Dr. Michael Chen',
-      role: 'Forensic Scientist, FBI',
-      initial: 'MC',
+      name: "Dr. Michael Chen",
+      role: "Forensic Scientist, FBI",
+      initial: "MC",
     },
   },
   {
-    body: 'Report generation alone has saved our team dozens of hours per case. The AI insights have proven invaluable for developing new investigative leads.',
+    body: "Report generation alone has saved our team dozens of hours per case. The AI insights have proven invaluable for developing new investigative leads.",
     author: {
-      name: 'Lt. Carlos Rodriguez',
-      role: 'Special Crimes Unit, Miami',
-      initial: 'CR',
+      name: "Lt. Carlos Rodriguez",
+      role: "Special Crimes Unit, Miami",
+      initial: "CR",
     },
   },
 ];
