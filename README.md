@@ -1,3 +1,4 @@
+
 # 🧬 Forensic — AI-Powered Crime Scene Analysis (Student Project)
 
 Hi! I'm working on **Forensic**, a project aimed at analyzing crime scenes using AI.  
@@ -34,5 +35,5 @@ cd forensic
 # Install dependencies
 npm install
 
-# Run the app
+# Run the app   // 
 npm run dev
