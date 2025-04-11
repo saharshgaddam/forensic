@@ -1,6 +1,6 @@
 
 # 🧬 Forensic — AI-Powered Crime Scene Analysis (Student Project)
-
+hello
 Hi! I'm working on **Forensic**, a project aimed at analyzing crime scenes using AI.  
 This is part of my learning journey to explore **Machine Learning**, **Computer Vision**, and **Full Stack Development** using tools like React, TypeScript, and Python.
 
